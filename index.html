@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EnergyWise | AI-Powered Energy Usage Prediction & Optimization</title>
+    
+    <!-- Google Fonts & Font Awesome Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Application Stylesheet -->
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+    <!-- ====================================================================
+         1. WELCOME / LOGIN SCREEN (MODAL OVERLAY)
+         ==================================================================== -->
+    <div class="auth-overlay-container" id="authOverlay">
+        <div class="auth-split-wrapper">
+            <!-- Left: Login Form -->
+            <div class="auth-left-form-panel">
+                <div class="auth-brand-row">
+                    <div class="brand-icon-logo">
+                        <i class="fa-solid fa-bolt-lightning"></i>
+                    </div>
+                    <div>
+                        <div class="auth-title">EnergyWise</div>
+                        <div class="auth-tagline">Predict smarter. Optimize better.</div>
+                    </div>
+                </div>
+
+                <div class="auth-role-tabs">
+                    <button class="auth-role-tab active" id="tabLoginUser" onclick="app.setLoginRole('User')">
+                        <i class="fa-solid fa-user"></i> Resident / Campus User
+                    </button>
+                    <button class="auth-role-tab" id="tabLoginAdmin" onclick="app.setLoginRole('Admin')">
+                        <i class="fa-solid fa-shield-halved"></i> System Admin
+                    </button>
+                </div>
+
+                <form class="auth-form" id="loginForm" onsubmit="event.preventDefault(); app.handleLogin();">
+                    <div class="form-group-auth">
+                        <label class="auth-label" for="loginEmail">Email / Username</label>
+                        <input type="email" class="auth-input" id="loginEmail" value="user@energywise.ai" required>
+                    </div>
+
+                    <div class="form-group-auth">
+                        <label class="auth-label" for="loginPassword">Password</label>
+                        <input type="password" class="auth-input" id="loginPassword" value="••••••••" required>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; font-size: 0.82rem; margin-top: -0.25rem;">
+                        <label style="display: flex; align-items: center; gap: 0.35rem; color: var(--text-secondary); cursor: pointer;">
+                            <input type="checkbox" checked> Remember me
+                        </label>
+                        <a href="javascript:void(0)" onclick="app.showToast('Password reset link sent to registered email')" style="color: var(--brand-blue); text-decoration: none; font-weight: 600;">Forgot Password?</a>
+                    </div>
+
+                    <button type="submit" class="btn-auth-submit" id="btnLoginSubmit">
+                        <span>Sign In to Dashboard</span>
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </form>
+
+                <!-- 1-Click Demo Buttons for Hackathon Judges -->
+                <div class="demo-quick-access">
+                    <div class="demo-title-text">⚡ 1-Click Hackathon Demo Access</div>
+                    <div class="demo-buttons-row">
+                        <button class="btn-demo-quick" onclick="app.quickLogin('User')">
+                            <i class="fa-solid fa-house"></i> Demo User
+                        </button>
+                        <button class="btn-demo-quick btn-demo-admin" onclick="app.quickLogin('Admin')">
+                            <i class="fa-solid fa-shield"></i> Demo Admin
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Startup Product Hero Panel -->
+            <div class="auth-right-hero-panel">
+                <div class="auth-hero-card">
+                    <img src="assets/energywise_hero.jpg" alt="EnergyWise Smart Home Ecosystem" class="auth-hero-img">
+                    <div class="auth-badge-floater top-right">
+                        <i class="fa-solid fa-brain" style="color: var(--brand-blue);"></i>
+                        <span>95.8% Forecast Accuracy (XGBoost)</span>
+                    </div>
+                    <div class="auth-badge-floater bottom-left">
+                        <i class="fa-solid fa-leaf" style="color: var(--brand-green);"></i>
+                        <span>Peak Shaving: -32% Grid Stress</span>
+                    </div>
+                    <div style="text-align: center; margin-top: 0.5rem;">
+                        <h3 style="font-size: 1.15rem; font-weight: 800; color: var(--text-navy);">Autonomous Energy Optimization</h3>
+                        <p style="font-size: 0.88rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                            Empowering Homes, Campuses, Offices & Industries with AI-driven load shifting.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================================================================
+         2. TOP APPLICATION NAVBAR
+         ==================================================================== -->
+    <header class="app-header">
+        <div class="header-brand" onclick="app.navigateToTab('home')">
+            <div class="brand-icon-logo" style="width: 38px; height: 38px; font-size: 1.2rem;">
+                <i class="fa-solid fa-bolt-lightning"></i>
+            </div>
+            <div class="brand-title-box">
+                <span class="brand-name">EnergyWise</span>
+                <span class="brand-tagline-micro">Predict smarter. Optimize better.</span>
+            </div>
+        </div>
+
+        <!-- Target Building Switcher (Homes, Campuses, Offices, Industries) -->
+        <div class="building-picker-container" id="buildingSelectorWrap">
+            <span class="building-picker-label"><i class="fa-solid fa-building-circle-check"></i> Target:</span>
+            <select class="building-select" id="buildingSelect" onchange="app.handleBuildingChange(this.value)">
+                <option value="home">🏠 GreenWood Smart Residence (Home)</option>
+                <option value="campus">🎓 Apex Institute Science Campus</option>
+                <option value="office">🏢 Nexus Tech Commercial Tower</option>
+                <option value="industry">🏭 Precision Dynamics Fab Plant</option>
+            </select>
+        </div>
+
+        <div class="header-actions">
+            <!-- Active Role Pill -->
+            <div class="role-badge user" id="headerRoleBadge">
+                <i class="fa-solid fa-user-check"></i>
+                <span id="headerRoleText">Resident User</span>
+            </div>
+
+            <!-- Currency Switcher -->
+            <select class="building-select" id="currencySelect" onchange="app.handleCurrencyChange(this.value)" style="border: 1px solid var(--border-subtle); padding: 0.35rem 0.65rem; border-radius: var(--radius-sm); font-size: 0.82rem;">
+                <option value="USD">$ USD</option>
+                <option value="INR">₹ INR</option>
+                <option value="EUR">€ EUR</option>
+            </select>
+
+            <!-- Switch/Logout -->
+            <button class="btn-logout" onclick="app.logout()">
+                <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                <span>Logout</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- ====================================================================
+         3. DESKTOP TAB NAVIGATION
+         ==================================================================== -->
+    <!-- User Tabs -->
+    <nav class="app-nav-tabs" id="userNavTabs">
+        <button class="nav-tab-link active" data-tab="home" onclick="app.navigateToTab('home')">
+            <i class="fa-solid fa-house"></i> Home Dashboard
+        </button>
+        <button class="nav-tab-link" data-tab="forecast" onclick="app.navigateToTab('forecast')">
+            <i class="fa-solid fa-chart-line"></i> AI Forecast
+        </button>
+        <button class="nav-tab-link" data-tab="optimize" onclick="app.navigateToTab('optimize')">
+            <i class="fa-solid fa-sliders"></i> Smart Optimization
+        </button>
+        <button class="nav-tab-link" data-tab="simulation" onclick="app.navigateToTab('simulation')">
+            <i class="fa-solid fa-flask"></i> What-If Simulation
+        </button>
+        <button class="nav-tab-link" data-tab="analytics" onclick="app.navigateToTab('analytics')">
+            <i class="fa-solid fa-chart-pie"></i> Energy Analytics
+        </button>
+        <button class="nav-tab-link" data-tab="alerts" onclick="app.navigateToTab('alerts')">
+            <i class="fa-solid fa-bell"></i> Alerts & Recommendations
+            <span class="nav-badge-pill" id="alertsCountBadge">4</span>
+        </button>
+    </nav>
+
+    <!-- Admin Tabs -->
+    <nav class="app-nav-tabs" id="adminNavTabs" style="display: none; background: #f0fdf4;">
+        <button class="nav-tab-link active" data-tab="admin-dash" onclick="app.navigateToTab('admin-dash')">
+            <i class="fa-solid fa-gauge-high"></i> Admin Dashboard
+        </button>
+        <button class="nav-tab-link" data-tab="admin-users" onclick="app.navigateToTab('admin-users')">
+            <i class="fa-solid fa-users"></i> Users & Buildings
+        </button>
+        <button class="nav-tab-link" data-tab="admin-substation" onclick="app.navigateToTab('admin-substation')">
+            <i class="fa-solid fa-network-wired"></i> Substation & Energy Data
+        </button>
+        <button class="nav-tab-link" data-tab="admin-reports" onclick="app.navigateToTab('admin-reports')">
+            <i class="fa-solid fa-file-invoice"></i> Reports & ML Specs
+        </button>
+    </nav>
+
+    <!-- ====================================================================
+         4. MAIN CONTENT CONTAINER
+         ==================================================================== -->
+    <main class="app-container">
+
+        <!-- ================================================================
+             USER VIEW 1: HOME / USER DASHBOARD
+             ================================================================ -->
+        <section class="view-section active" id="view-home">
+            <div class="section-heading-bar">
+                <div class="heading-title-group">
+                    <h1 id="dashBuildingTitle">
+                        <i class="fa-solid fa-house-chimney" style="color: var(--brand-blue);"></i>
+                        GreenWood Smart Residence
+                    </h1>
+                    <p class="heading-subtitle" id="dashBuildingSubtitle">Real-time smart meter stream, renewable solar index, and energy optimization status</p>
+                </div>
+                <div style="display: flex; gap: 0.75rem;">
+                    <button class="btn btn-primary btn-sm" onclick="app.navigateToTab('optimize')">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> Optimize Now
+                    </button>
+                    <button class="btn btn-outline btn-sm" onclick="app.navigateToTab('simulation')">
+                        <i class="fa-solid fa-flask"></i> Run What-If
+                    </button>
+                </div>
+            </div>
+
+            <!-- Weather & Solar Environmental Availability Strip -->
+            <div class="environment-strip">
+                <div class="env-card">
+                    <div class="env-icon-box" id="envWeatherIcon">
+                        <i class="fa-solid fa-sun"></i>
+                    </div>
+                    <div>
+                        <div class="env-details-title" id="envWeatherTemp">28°C Sunny & Pleasant</div>
+                        <div class="env-details-sub" id="envWeatherSub">Humidity: 48% | Solar Irradiance: 840 W/m² (Low HVAC Thermal Load)</div>
+                    </div>
+                </div>
+
+                <div class="env-card">
+                    <div class="env-icon-box solar">
+                        <i class="fa-solid fa-solar-panel"></i>
+                    </div>
+                    <div>
+                        <div class="env-details-title" id="envSolarTitle">Rooftop Solar: 3.6 kW Active</div>
+                        <div class="env-details-sub" id="envSolarSub">82% Self-Consumption | Grid Solar Index: High (76% Clean)</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 6 Key Energy Overview KPI Cards -->
+            <div class="dashboard-kpi-grid">
+                <!-- 1. Current Consumption (Live kW) -->
+                <div class="kpi-tile">
+                    <div class="kpi-tile-top">
+                        <div class="kpi-icon-avatar kpi-icon-blue"><i class="fa-solid fa-bolt"></i></div>
+                        <span class="badge-status badge-eff" style="font-size: 0.7rem;"><i class="fa-solid fa-circle" style="font-size: 0.45rem;"></i> Live Meter</span>
+                    </div>
+                    <div>
+                        <div class="kpi-tile-label">Current Demand</div>
+                        <div class="kpi-tile-value"><span id="kpiCurrentKw">3.42</span><span class="kpi-unit-sub">kW</span></div>
+                        <div class="kpi-sub-note">15-second IoT telemetry</div>
+                    </div>
+                </div>
+
+                <!-- 2. Today's Energy Usage (kWh) -->
+                <div class="kpi-tile">
+                    <div class="kpi-tile-top">
+                        <div class="kpi-icon-avatar kpi-icon-blue"><i class="fa-solid fa-calendar-day"></i></div>
+                        <span style="font-size: 0.78rem; color: var(--brand-green); font-weight: 700;">-8.8% vs Yest</span>
+                    </div>
+                    <div>
+                        <div class="kpi-tile-label">Today's Usage</div>
+                        <div class="kpi-tile-value"><span id="kpiTodayKwh">24.8</span><span class="kpi-unit-sub">kWh</span></div>
+                        <div class="kpi-sub-note">Cumulative daily consumption</div>
+                    </div>
+                </div>
+
+                <!-- 3. Estimated Energy Cost -->
+                <div class="kpi-tile">
+                    <div class="kpi-tile-top">
+                        <div class="kpi-icon-avatar kpi-icon-amber"><i class="fa-solid fa-wallet"></i></div>
+                        <span style="font-size: 0.75rem; color: var(--text-muted);">ToU Tariff</span>
+                    </div>
+                    <div>
+                        <div class="kpi-tile-label">Estimated Cost</div>
+                        <div class="kpi-tile-value" style="color: var(--brand-blue);"><span id="kpiEstCost">$3.96</span></div>
+                        <div class="kpi-sub-note">Daily billed projection</div>
+                    </div>
+                </div>
+
+                <!-- 4. Peak Demand (kW) -->
+                <div class="kpi-tile">
+                    <div class="kpi-tile-top">
+                        <div class="kpi-icon-avatar kpi-icon-purple"><i class="fa-solid fa-arrow-trend-up"></i></div>
+                        <span style="font-size: 0.75rem; color: var(--brand-amber); font-weight: 600;" id="kpiPeakTime">At 7:15 PM</span>
+                    </div>
+                    <div>
+                        <div class="kpi-tile-label">Peak Demand</div>
+                        <div class="kpi-tile-value"><span id="kpiPeakDemand">5.8</span><span class="kpi-unit-sub">kW</span></div>
+                        <div class="kpi-sub-note">Grid peak threshold: 6.0 kW</div>
+                    </div>
+                </div>
+
+                <!-- 5. Energy Saved (kWh) -->
+                <div class="kpi-tile">
+                    <div class="kpi-tile-top">
+                        <div class="kpi-icon-avatar kpi-icon-green"><i class="fa-solid fa-circle-check"></i></div>
+                        <span class="badge-status badge-eff" style="font-size: 0.7rem;">Optimized</span>
+                    </div>
+                    <div>
+                        <div class="kpi-tile-label">Energy Saved</div>
+                        <div class="kpi-tile-value" style="color: var(--brand-green);"><span id="kpiEnergySaved">5.6</span><span class="kpi-unit-sub">kWh</span></div>
+                        <div class="kpi-sub-note">Through automated shifts</div>
+                    </div>
+                </div>
+
+                <!-- 6. CO2 Reduction (kg) -->
+                <div class="kpi-tile">
+                    <div class="kpi-tile-top">
+                        <div class="kpi-icon-avatar kpi-icon-green"><i class="fa-solid fa-seedling"></i></div>
+                        <span style="font-size: 0.75rem; color: var(--brand-green); font-weight: 700;">Zero Emission</span>
+                    </div>
+                    <div>
+                        <div class="kpi-tile-label">CO₂ Avoided</div>
+                        <div class="kpi-tile-value" style="color: var(--brand-green);"><span id="kpiCo2Reduction">2.35</span><span class="kpi-unit-sub">kg</span></div>
+                        <div class="kpi-sub-note">Grid factor 0.42 kg/kWh</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mini Daily Trend Chart & Quick Highlights -->
+            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem;">
+                <div class="card">
+                    <div class="card-header-clean">
+                        <h3 class="card-title-clean">
+                            <i class="fa-solid fa-chart-area" style="color: var(--brand-blue);"></i>
+                            Today's Hourly Demand Trend & Peak Periods
+                        </h3>
+                        <button class="btn btn-outline btn-sm" onclick="app.navigateToTab('forecast')">
+                            View 48h AI Forecast <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
+                    <div style="height: 220px; width: 100%;">
+                        <canvas id="dashboardMiniChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3 class="card-title-clean" style="margin-bottom: 1rem;">
+                        <i class="fa-solid fa-wand-magic-sparkles" style="color: var(--brand-green);"></i>
+                        Top Optimization Action
+                    </h3>
+                    <div style="background: var(--brand-blue-subtle); border-radius: var(--radius-md); padding: 1rem; border: 1px solid var(--brand-blue-light); margin-bottom: 1rem;">
+                        <div style="font-weight: 700; color: var(--text-navy); font-size: 0.95rem;">🚗 Shift EV Charger to 11:30 PM</div>
+                        <p style="font-size: 0.84rem; color: var(--text-secondary); margin-top: 0.35rem;">
+                            Avoids 6.6 kW grid peak spike. Save $2.45/charge cycle and earn off-peak green utility credit.
+                        </p>
+                    </div>
+                    <button class="btn btn-green" style="width: 100%;" onclick="app.navigateToTab('optimize')">
+                        Review Flexible Appliances <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================================================================
+             USER VIEW 2: AI ENERGY FORECAST
+             ================================================================ -->
+        <section class="view-section" id="view-forecast">
+            <div class="section-heading-bar">
+                <div class="heading-title-group">
+                    <h1>
+                        <i class="fa-solid fa-brain" style="color: var(--brand-blue);"></i>
+                        AI Energy Consumption Forecast
+                    </h1>
+                    <p class="heading-subtitle">Next 24–48 hours predictive consumption with 95% confidence intervals and peak alerts</p>
+                </div>
+                <div class="filter-btn-group">
+                    <button class="filter-btn active" id="btnForecast24" onclick="app.switchForecastHorizon('24h')">Next 24 Hours</button>
+                    <button class="filter-btn" id="btnForecast48" onclick="app.switchForecastHorizon('48h')">Next 48 Hours</button>
+                </div>
+            </div>
+
+            <div class="forecast-grid">
+                <!-- Main Forecast Chart Panel -->
+                <div class="card">
+                    <div class="card-header-clean">
+                        <div class="card-title-clean">
+                            <i class="fa-solid fa-chart-line" style="color: var(--brand-blue);"></i>
+                            Actual Meter vs AI Predicted Load Curve (kW)
+                        </div>
+                        <div class="badge-status badge-mod" id="forecastRiskBadge">
+                            <i class="fa-solid fa-triangle-exclamation"></i> Peak Surge Risk: 6:30 PM – 9:00 PM
+                        </div>
+                    </div>
+                    <div class="chart-box-large">
+                        <canvas id="forecastMainChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- AI Model Transparency & Feature Importance Card -->
+                <div class="model-card-box">
+                    <h3 class="card-title-clean" style="margin-bottom: 0.75rem;">
+                        <i class="fa-solid fa-microchip" style="color: var(--brand-purple);"></i>
+                        AI Prediction Model Specs
+                    </h3>
+                    <p style="font-size: 0.84rem; color: var(--text-secondary); margin-bottom: 1.25rem;">
+                        XGBoost Regressor + Temporal Fusion Transformer trained on historical smart meter readings, seasonal weather patterns, and occupancy schedules.
+                    </p>
+
+                    <div style="background: var(--bg-card-subtle); padding: 0.75rem 1rem; border-radius: var(--radius-sm); margin-bottom: 1.25rem; font-size: 0.82rem;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.35rem;">
+                            <span style="color: var(--text-muted);">Model Accuracy:</span>
+                            <strong style="color: var(--brand-green);">R² = 0.958 (MAPE 3.8%)</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: var(--text-muted);">Inference Latency:</span>
+                            <strong>42 ms (FastAPI REST)</strong>
+                        </div>
+                    </div>
+
+                    <div style="font-size: 0.78rem; text-transform: uppercase; font-weight: 700; color: var(--text-muted); margin-bottom: 0.75rem;">
+                        Feature Importance Weights
+                    </div>
+
+                    <div class="feature-importance-row">
+                        <div class="feature-label-strip">
+                            <span>Lagged Meter Readings (t-168)</span>
+                            <span>38%</span>
+                        </div>
+                        <div class="feature-bar-wrap"><div class="feature-bar-fill" style="width: 38%;"></div></div>
+                    </div>
+
+                    <div class="feature-importance-row">
+                        <div class="feature-label-strip">
+                            <span>Weather: Temp & Irradiance</span>
+                            <span>28%</span>
+                        </div>
+                        <div class="feature-bar-wrap"><div class="feature-bar-fill" style="width: 28%;"></div></div>
+                    </div>
+
+                    <div class="feature-importance-row">
+                        <div class="feature-label-strip">
+                            <span>Time of Day & Day of Week</span>
+                            <span>20%</span>
+                        </div>
+                        <div class="feature-bar-wrap"><div class="feature-bar-fill" style="width: 20%;"></div></div>
+                    </div>
+
+                    <div class="feature-importance-row">
+                        <div class="feature-label-strip">
+                            <span>Occupancy / Wi-Fi Density</span>
+                            <span>14%</span>
+                        </div>
+                        <div class="feature-bar-wrap"><div class="feature-bar-fill" style="width: 14%;"></div></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================================================================
+             USER VIEW 3: SMART OPTIMIZATION
+             ================================================================ -->
+        <section class="view-section" id="view-optimize">
+            <div class="section-heading-bar">
+                <div class="heading-title-group">
+                    <h1>
+                        <i class="fa-solid fa-sliders" style="color: var(--brand-green);"></i>
+                        Smart Load Optimization
+                    </h1>
+                    <p class="heading-subtitle">Shift flexible appliances toward low-demand periods with 1-tap approval and manual override</p>
+                </div>
+                <button class="btn btn-green btn-sm" onclick="app.applyAllBuildingOptimizations()">
+                    <i class="fa-solid fa-check-double"></i> Apply All Recommendations
+                </button>
+            </div>
+
+            <!-- Appliance Optimization Cards Grid -->
+            <div class="optimization-cards-grid" id="optimizationCardsGrid">
+                <!-- Dynamically populated by app.js -->
+            </div>
+        </section>
+
+        <!-- ================================================================
+             USER VIEW 4: WHAT-IF SIMULATION
+             ================================================================ -->
+        <section class="view-section" id="view-simulation">
+            <div class="section-heading-bar">
+                <div class="heading-title-group">
+                    <h1>
+                        <i class="fa-solid fa-flask" style="color: var(--brand-purple);"></i>
+                        Interactive What-If Simulation
+                    </h1>
+                    <p class="heading-subtitle">Dynamically adjust appliance schedules and observe load curve flattening and cost reductions</p>
+                </div>
+                <button class="btn btn-outline btn-sm" onclick="app.resetWhatIfSimulation()">
+                    <i class="fa-solid fa-rotate-left"></i> Reset Defaults
+                </button>
+            </div>
+
+            <div class="whatif-layout-grid">
+                <!-- Left: Sliders & Toggles Panel -->
+                <div class="whatif-controls-panel">
+                    <h3 class="card-title-clean" style="margin-bottom: 1.25rem;">
+                        <i class="fa-solid fa-sliders"></i> Adjustable Simulation Parameters
+                    </h3>
+
+                    <!-- Slider 1: HVAC Shift -->
+                    <div class="slider-group-box">
+                        <div class="slider-label-row">
+                            <span>HVAC Pre-Cooling Shift:</span>
+                            <strong id="valHvacShift" style="color: var(--brand-blue);">2.0 Hours</strong>
+                        </div>
+                        <input type="range" class="whatif-slider" id="slideHvacShift" min="0" max="4" step="0.5" value="2" oninput="app.triggerWhatIfRecalc()">
+                        <span style="font-size: 0.72rem; color: var(--text-muted);">Ramps thermostat down before peak window begins</span>
+                    </div>
+
+                    <!-- Toggle: EV Shift -->
+                    <div class="toggle-switch-card">
+                        <div>
+                            <div style="font-weight: 700; font-size: 0.9rem; color: var(--text-navy);">🚗 Shift EV Charging to Night</div>
+                            <div style="font-size: 0.78rem; color: var(--text-muted);">Starts at 11:30 PM (Super Off-Peak Tariff)</div>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="toggleEvShift" checked onchange="app.triggerWhatIfRecalc()">
+                            <span class="slider-round"></span>
+                        </label>
+                    </div>
+
+                    <!-- Toggle: Water Heater Shift -->
+                    <div class="toggle-switch-card">
+                        <div>
+                            <div style="font-weight: 700; font-size: 0.9rem; color: var(--text-navy);">♨️ Water Heater Solar Alignment</div>
+                            <div style="font-size: 0.78rem; color: var(--text-muted);">Shift storage heating to 12 PM solar surplus</div>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="toggleWaterShift" checked onchange="app.triggerWhatIfRecalc()">
+                            <span class="slider-round"></span>
+                        </label>
+                    </div>
+
+                    <!-- Slider 2: Efficiency Boost -->
+                    <div class="slider-group-box" style="margin-top: 1.25rem;">
+                        <div class="slider-label-row">
+                            <span>Efficiency Conservation Factor:</span>
+                            <strong id="valEffBoost" style="color: var(--brand-green);">15%</strong>
+                        </div>
+                        <input type="range" class="whatif-slider" id="slideEffBoost" min="0" max="30" step="5" value="15" oninput="app.triggerWhatIfRecalc()">
+                        <span style="font-size: 0.72rem; color: var(--text-muted);">Behavioral conservation and idle phantom load reduction</span>
+                    </div>
+                </div>
+
+                <!-- Right: Side-by-Side Comparison & Load Flattening Curve -->
+                <div>
+                    <!-- 3 Comparison Stats Cards -->
+                    <div class="whatif-comparison-cards">
+                        <div class="whatif-stat-card">
+                            <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700;">PEAK DEMAND</div>
+                            <div style="font-size: 1.35rem; font-weight: 800; color: var(--brand-rose); margin: 0.35rem 0;" id="simPeakCompare">6.8 kW → 4.6 kW</div>
+                            <span class="badge-status badge-eff" style="font-size: 0.72rem;" id="simPeakReductionBadge">-32% Peak Stress</span>
+                        </div>
+
+                        <div class="whatif-stat-card highlight">
+                            <div style="font-size: 0.75rem; color: var(--brand-green); font-weight: 700;">COST SAVINGS</div>
+                            <div style="font-size: 1.35rem; font-weight: 800; color: var(--brand-green); margin: 0.35rem 0;" id="simCostCompare">$1.45 Saved</div>
+                            <span style="font-size: 0.72rem; color: var(--brand-green); font-weight: 600;">Daily electricity bill reduction</span>
+                        </div>
+
+                        <div class="whatif-stat-card">
+                            <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700;">LOAD SHIFTED</div>
+                            <div style="font-size: 1.35rem; font-weight: 800; color: var(--brand-blue); margin: 0.35rem 0;" id="simShiftedKwh">4.8 kWh</div>
+                            <span style="font-size: 0.72rem; color: var(--text-muted);">Moved from peak to green hours</span>
+                        </div>
+                    </div>
+
+                    <!-- What-If Comparison Curve Canvas -->
+                    <div class="card">
+                        <div class="card-header-clean">
+                            <h3 class="card-title-clean">
+                                <i class="fa-solid fa-chart-line" style="color: var(--brand-green);"></i>
+                                Before vs After Optimization Load Curve
+                            </h3>
+                            <span style="font-size: 0.75rem; color: var(--text-muted);">Peak Shaving & Valley Filling</span>
+                        </div>
+                        <div style="height: 260px; width: 100%;">
+                            <canvas id="whatIfChartCanvas"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================================================================
+             USER VIEW 5: ALERTS & RECOMMENDATIONS
+             ================================================================ -->
+        <section class="view-section" id="view-alerts">
+            <div class="section-heading-bar">
+                <div class="heading-title-group">
+                    <h1>
+                        <i class="fa-solid fa-bell" style="color: var(--brand-amber);"></i>
+                        Alerts & Explainable Recommendations
+                    </h1>
+                    <p class="heading-subtitle">Root-cause explainability, projected savings impact, and 1-tap manual override controls</p>
+                </div>
+            </div>
+
+            <div id="alertsContainerClean">
+                <!-- Dynamically populated by app.js -->
+            </div>
+        </section>
+
+        <!-- ================================================================
+             USER VIEW 6: ENERGY ANALYTICS
+             ================================================================ -->
+        <section class="view-section" id="view-analytics">
+            <div class="section-heading-bar">
+                <div class="heading-title-group">
+                    <h1>
+                        <i class="fa-solid fa-chart-pie" style="color: var(--brand-blue);"></i>
+                        Energy Analytics & Efficiency Reports
+                    </h1>
+                    <p class="heading-subtitle">Breakdown by appliance category, time-of-use tariffs, and forecast model accuracy metrics</p>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                <div class="card">
+                    <h3 class="card-title-clean" style="margin-bottom: 1rem;">
+                        <i class="fa-solid fa-chart-pie" style="color: var(--brand-blue);"></i>
+                        Appliance Load Contribution
+                    </h3>
+                    <div style="height: 260px; width: 100%;">
+                        <canvas id="analyticsDoughnutCanvas"></canvas>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3 class="card-title-clean" style="margin-bottom: 1rem;">
+                        <i class="fa-solid fa-bars-staggered" style="color: var(--brand-green);"></i>
+                        Peak vs Off-Peak Weekly Shift
+                    </h3>
+                    <div style="height: 260px; width: 100%;">
+                        <canvas id="analyticsTouCanvas"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================================================================
+             ADMIN VIEW 1: ADMIN DASHBOARD & FLEET OVERVIEW
+             ================================================================ -->
+        <section class="view-section" id="view-admin-dash">
+            <div class="section-heading-bar">
+                <div class="heading-title-group">
+                    <h1>
+                        <i class="fa-solid fa-shield-halved" style="color: var(--brand-green);"></i>
+                        EnergyWise Admin Management Center
+                    </h1>
+                    <p class="heading-subtitle">Grid-level oversight across 148 registered smart homes, campuses, corporate towers, and industrial plants</p>
+                </div>
+                <button class="btn btn-primary btn-sm" onclick="app.exportAdminReport()">
+                    <i class="fa-solid fa-file-arrow-down"></i> Export Fleet Report
+                </button>
+            </div>
+
+            <!-- Admin Campus Hero Strip -->
+            <div class="admin-banner-hero">
+                <div>
+                    <h2 style="font-size: 1.35rem; font-weight: 800;">Microgrid Substation Load & Renewable Distribution</h2>
+                    <p style="font-size: 0.9rem; color: #cbd5e1; margin-top: 0.35rem; max-width: 680px;">
+                        Monitoring aggregate active demand across all feeder circuits. AI load shifting has reduced peak transformer thermal stress by 28.4% today.
+                    </p>
+                </div>
+                <img src="assets/smart_campus_iot.jpg" alt="Commercial Campus IoT Microgrid" class="admin-campus-img">
+            </div>
+
+            <!-- Admin Fleet KPIs -->
+            <div class="admin-fleet-grid">
+                <div class="kpi-tile">
+                    <div class="kpi-tile-label">Monitored Facilities</div>
+                    <div class="kpi-tile-value font-mono">148</div>
+                    <div class="kpi-sub-note">620 Active IoT Sub-Meters</div>
+                </div>
+
+                <div class="kpi-tile">
+                    <div class="kpi-tile-label">Aggregate Load</div>
+                    <div class="kpi-tile-value font-mono" style="color: var(--brand-blue);">4.82 <span style="font-size: 0.9rem;">MW</span></div>
+                    <div class="kpi-sub-note">Substation safe limit: 6.5 MW</div>
+                </div>
+
+                <div class="kpi-tile">
+                    <div class="kpi-tile-label">Substation Capacity</div>
+                    <div class="kpi-tile-value font-mono" style="color: var(--brand-green);">68.4%</div>
+                    <div class="kpi-sub-note">Optimal Operating Band</div>
+                </div>
+
+                <div class="kpi-tile">
+                    <div class="kpi-tile-label">AI Forecast Accuracy</div>
+                    <div class="kpi-tile-value font-mono" style="color: var(--brand-purple);">3.8% <span style="font-size: 0.85rem;">MAPE</span></div>
+                    <div class="kpi-sub-note">R² = 0.958 (XGBoost Fleet)</div>
+                </div>
+            </div>
+
+            <!-- Substation Transformer Chart -->
+            <div class="card" style="margin-top: 1.5rem;">
+                <div class="card-header-clean">
+                    <h3 class="card-title-clean">
+                        <i class="fa-solid fa-network-wired" style="color: var(--brand-blue);"></i>
+                        Aggregate Substation Load Profile vs Thermal Threshold (MW)
+                    </h3>
+                    <span class="badge-status badge-eff">Normal Grid Health</span>
+                </div>
+                <div style="height: 280px; width: 100%;">
+                    <canvas id="adminSubstationChartCanvas"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================================================================
+             ADMIN VIEW 2: USERS & BUILDINGS TABLE
+             ================================================================ -->
+        <section class="view-section" id="view-admin-users">
+            <div class="section-heading-bar">
+                <div class="heading-title-group">
+                    <h1>
+                        <i class="fa-solid fa-users" style="color: var(--brand-blue);"></i>
+                        Registered Buildings & Connected Meters
+                    </h1>
+                    <p class="heading-subtitle">Live status across Homes, Colleges/Campuses, Commercial Offices, and Industrial Plants</p>
+                </div>
+            </div>
+
+            <div class="card" style="padding: 0; overflow: hidden;">
+                <table class="data-table-clean">
+                    <thead>
+                        <tr>
+                            <th>Facility Name</th>
+                            <th>Category</th>
+                            <th>Sub-Meters</th>
+                            <th>Active Load (kW)</th>
+                            <th>Peak Risk Status</th>
+                            <th>IoT Telemetry Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="adminBuildingsTableBody">
+                        <!-- Populated by app.js -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- ================================================================
+             ADMIN VIEW 3: SUBSTATION & ENERGY DATA
+             ================================================================ -->
+        <section class="view-section" id="view-admin-substation">
+            <div class="section-heading-bar">
+                <div class="heading-title-group">
+                    <h1>
+                        <i class="fa-solid fa-network-wired" style="color: var(--brand-green);"></i>
+                        Grid Feeder & Substation Telemetry
+                    </h1>
+                    <p class="heading-subtitle">High-voltage feeder line monitoring, reactive power factor, and distributed solar generation</p>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                <div class="card">
+                    <h3 class="card-title-clean" style="margin-bottom: 1rem;">Feeder Bus #1 (Educational & Commercial)</h3>
+                    <p style="font-size: 0.88rem; color: var(--text-secondary); margin-bottom: 1rem;">
+                        Voltage: 11.2 kV | Power Factor: 0.98 | Solar Injection: 123 kW active.
+                    </p>
+                    <div style="background: var(--brand-green-light); border: 1px solid var(--brand-green-border); padding: 1rem; border-radius: var(--radius-md);">
+                        <strong style="color: var(--brand-green);">✓ Zero Harmonic Distortions</strong>
+                        <p style="font-size: 0.82rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                            Campus battery storage absorption is active during peak solar hours.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3 class="card-title-clean" style="margin-bottom: 1rem;">Feeder Bus #2 (Residential Clusters)</h3>
+                    <p style="font-size: 0.88rem; color: var(--text-secondary); margin-bottom: 1rem;">
+                        Voltage: 11.0 kV | Power Factor: 0.95 | EV Demand: 84 kW.
+                    </p>
+                    <div style="background: var(--brand-blue-subtle); border: 1px solid var(--brand-blue-light); padding: 1rem; border-radius: var(--radius-md);">
+                        <strong style="color: var(--brand-blue);">✓ Smart Scheduling Enforced</strong>
+                        <p style="font-size: 0.82rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                            92% of residential EV chargers deferred to midnight off-peak tariff.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================================================================
+             ADMIN VIEW 4: REPORTS & ML SPECS
+             ================================================================ -->
+        <section class="view-section" id="view-admin-reports">
+            <div class="section-heading-bar">
+                <div class="heading-title-group">
+                    <h1>
+                        <i class="fa-solid fa-file-invoice" style="color: var(--brand-purple);"></i>
+                        Executive Reports & AI Architecture Specs
+                    </h1>
+                    <p class="heading-subtitle">Technical blueprint aligned with ANVATION Hackathon 2026 PPT</p>
+                </div>
+                <button class="btn btn-primary btn-sm" onclick="app.exportAdminReport()">
+                    <i class="fa-solid fa-download"></i> Download Report (JSON/PDF)
+                </button>
+            </div>
+
+            <div class="card">
+                <h3 class="card-title-clean" style="margin-bottom: 1rem;">
+                    <i class="fa-solid fa-code" style="color: var(--brand-blue);"></i>
+                    Proposed Technical Stack Architecture
+                </h3>
+                <div style="background: var(--bg-card-subtle); padding: 1.25rem; border-radius: var(--radius-md); font-family: monospace; font-size: 0.88rem; line-height: 1.6;">
+                    <p><strong>Frontend:</strong> HTML5, Vanilla CSS (Modern Light Glassmorphism), Modular ES6 JS, Chart.js</p>
+                    <p><strong>Backend API:</strong> Python 3.11, FastAPI (Asynchronous REST & WebSockets), Uvicorn</p>
+                    <p><strong>AI / ML Engine:</strong> Pandas, NumPy, scikit-learn, XGBoost Regressor, Temporal Fusion Transformer</p>
+                    <p><strong>Data Storage:</strong> SQLite (Local Edge Caching) + Firebase Realtime DB / PostgreSQL</p>
+                    <p><strong>Optimization:</strong> Linear Programming (SciPy linprog / PuLP) for peak load shifting</p>
+                    <p><strong>Target Users:</strong> Homes, Colleges / Campuses, Commercial Offices, Heavy Industries</p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ====================================================================
+         5. MOBILE BOTTOM NAVIGATION BAR
+         ==================================================================== -->
+    <nav class="mobile-bottom-nav">
+        <button class="mobile-nav-btn active" onclick="app.navigateToTab('home')">
+            <i class="fa-solid fa-house"></i>
+            <span>Home</span>
+        </button>
+        <button class="mobile-nav-btn" onclick="app.navigateToTab('forecast')">
+            <i class="fa-solid fa-chart-line"></i>
+            <span>Forecast</span>
+        </button>
+        <button class="mobile-nav-btn" onclick="app.navigateToTab('optimize')">
+            <i class="fa-solid fa-sliders"></i>
+            <span>Optimize</span>
+        </button>
+        <button class="mobile-nav-btn" onclick="app.navigateToTab('simulation')">
+            <i class="fa-solid fa-flask"></i>
+            <span>Simulate</span>
+        </button>
+        <button class="mobile-nav-btn" onclick="app.navigateToTab('analytics')">
+            <i class="fa-solid fa-chart-pie"></i>
+            <span>Analytics</span>
+        </button>
+    </nav>
+
+    <!-- Toast Notification Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Chart.js CDN for Visualizations -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+    <!-- Application Script Modules -->
+    <script src="js/data.js"></script>
+    <script src="js/ml-engine.js"></script>
+    <script src="js/charts.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
